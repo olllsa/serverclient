@@ -18,7 +18,7 @@ int startConnection(int *s)
     *s = socket(AF_INET , SOCK_STREAM , 0);
     if (*s == -1)
     {
-        //("Filed to create to socket\n");
+        puts("Filed to create to socket\n");
         return *s;
     }
 
@@ -29,7 +29,7 @@ int startConnection(int *s)
     int status = connect(*s, (struct sockaddr *) &server, sizeof(server));
     if (status == -1)
     {
-        //("Failed to connect to server\n");
+        puts("Failed to connect to server\n");
         return status;
     }
     return *s;
