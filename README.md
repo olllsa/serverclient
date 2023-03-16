@@ -18,5 +18,5 @@
   cd ..
   cd client
   make
-  ./client>
+  ./client
 ```
