@@ -1,8 +1,21 @@
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include "list.h"
 
+/*********************************************************************
+ *
+ * @purpose  Push element data to list h
+ *
+ * @param Node **h              head of list
+ *
+ * @param unsigned int data     data
+ *
+ * @return void
+ *
+ * @note This function push element "data" to list "h"
+ *
+ * @end
+ *
+ *********************************************************************/
 void push(Node **h, unsigned int data)
 {
     Node *tmp = (Node*) malloc(sizeof(Node));
@@ -11,8 +24,20 @@ void push(Node **h, unsigned int data)
     (*h) = tmp;
 }
 
-
-int pop(Node **h) {
+/*********************************************************************
+ *
+ * @purpose  Pop element from list h
+ *
+ * @param Node **h              head of list
+ *
+ * @return unsigned int         data of element
+ *
+ * @note This function pop element from list "h"
+ *
+ * @end
+ *
+ *********************************************************************/
+unsigned int pop(Node **h) {
     Node* prev = NULL;
     int val;
     if (h == NULL) {
@@ -25,6 +50,19 @@ int pop(Node **h) {
     return val;
 }
 
+/*********************************************************************
+ *
+ * @purpose  Delete List and free memory
+ *
+ * @param Node **h              head of list
+ *
+ * @return void
+ *
+ * @note This function deletes list "h" and free memory
+ *
+ * @end
+ *
+ *********************************************************************/
 void deleteList(Node **h) {
     Node* prev = NULL;
     while ((*h)->next) {
@@ -34,4 +72,3 @@ void deleteList(Node **h) {
     }
     free(*h);
 }
-
