@@ -7,16 +7,28 @@
 #include <unistd.h>
 #include "list.h"
 
-#define PORT            100
-#define IP_ADDR         "127.0.0.2"
-#define BUF_SIZE        20
-#define MAX_CONNECTION  6
+#define PORT            100         // port for tcp-connection
+#define IP_ADDR         "127.0.0.2" // ip address for tcp-connection
+#define BUF_SIZE        20          // buf size for reading data from socket
+#define MAX_CONNECTION  6           // max number of tcp-connection to clients
 
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
-
-Node* head = NULL;
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;   //mutex for locking accessing to list
+Node* head = NULL;                                          // list of elements of numbers from clients
  
+/*********************************************************************
+ *
+ * @purpose  Socket Handler
+ *
+ * @param void *sd              socket descriptor
+ *
+ * @return void *
+ *
+ * @note This function for handling for socket-connection.
+ *       Read message from client socket. Write data to list
+ *
+ * @end
+ *
+ *********************************************************************/
 void *socketHandler(void *sd)
 {
     int sock = *(int*)sd;
@@ -45,6 +57,18 @@ void *socketHandler(void *sd)
     pthread_exit(NULL);
 }
 
+/*********************************************************************
+ *
+ * @purpose  Logger Handler
+ *
+ * @return void*
+ *
+ * @note This function for handling for logger.
+ *       Read data from list and puts it to console
+ *
+ * @end
+ *
+ *********************************************************************/
 void *loggerHandler()
 {
     while (1)
@@ -62,43 +86,64 @@ void *loggerHandler()
     }
     return 0;
 }
- 
+
+
+/*********************************************************************
+ *
+ * @purpose  Main function for server
+ *
+ * @note Create pthreads for logger and pthread for every new connection for client.
+ *
+ * @end
+ *
+ *********************************************************************/
 int main(int argc , char *argv[])
 {
-    int listen_sock , client_sock , c;
-    struct sockaddr_in server , client;
-    pthread_t thread_id[MAX_CONNECTION], thread_log_id;
-    unsigned int n = 0;
+    int listen_sock;                    // socket for listening
+    int client_sock;                    // socket for accepted connection for client
+    struct sockaddr_in server;          // socket structure for server
+    struct sockaddr_in client;          // socket structure for accepted connection from client
+    pthread_t thread_id[MAX_CONNECTION];// array of threads id for handling connetion
+    pthread_t thread_log_id;            // thread id for logger
+    unsigned int n = 0;                 // number of accepted connection. Connection are not reusable
+    int c;                              // size of socket structure
 
+    //init mutex for locking access to list of numbers
     pthread_mutex_init(&mutex, NULL);
 
+    //create pthread for logger
     if( pthread_create( &thread_log_id , NULL ,  loggerHandler , NULL ) < 0)
     {
         perror("Failed to create to thread\n");
         return 1;
     }
 
+    //create listening socket
     listen_sock = socket(AF_INET , SOCK_STREAM , 0);
     if (listen_sock == -1)
     {
         printf("Failed to create to socket\n");
     }
      
+    //prepare struct for servers data
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = inet_addr( IP_ADDR );
     server.sin_port = htons( PORT );
      
+    //bind listening socket
     if( bind(listen_sock,(struct sockaddr *)&server , sizeof(server)) < 0)
     {
         perror("Failed to bind to socket\n");
         return 1;
     }
 
+    //listen listening socket
     listen(listen_sock , 1);
      
     c = sizeof(struct sockaddr_in);
 	
-    while( (client_sock = accept(listen_sock, (struct sockaddr *)&client, (socklen_t*)&c)) > 0 )
+    //connection from clients has been accepted
+    while( (client_sock = accept(listen_sock, (struct sockaddr*)&client, (socklen_t*)&c)) > 0 )
     {
         if (client_sock < 0)
         {
@@ -107,6 +152,7 @@ int main(int argc , char *argv[])
 
         if(MAX_CONNECTION > n)
         {
+    //create thread for accepted connection
             if( pthread_create( &thread_id[n++] , NULL ,  socketHandler , (void*) &client_sock) < 0)
             {
                 perror("Failed to create to thread\n");
@@ -118,12 +164,16 @@ int main(int argc , char *argv[])
         }
     }
 
+    // join pthreads for handling connections
     for(n=0; n< MAX_CONNECTION; n++)
     {
         pthread_join(thread_id[n], NULL);
     }
 
+    // join pthread for logger
     pthread_join(thread_log_id , NULL);
+
+    // free memory for list
     deleteList(&head);
     return 0;
 }
