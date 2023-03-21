@@ -64,45 +64,41 @@ int startConnection(int *s)
  *********************************************************************/
 void *clientHandler()
 {
-    int sock = 0;                       //local socket for connection
+    int sock = -1;                      //local socket for connection
     int write_size = 0;                 //size for writing
-    char client_message[BUF_SIZE] = {0};//buffer for message to server
     unsigned long tid;                  //thread id
 
     struct timespec tw = {1,125000000}; //time structure for sleeping
     struct timespec tr;
 
     tid = pthread_self();
-    //start connection on socket
-    startConnection(&sock);
 
-    while(sock)
+    while(1)
     {
         unsigned int r;
         unsigned int seed = time(NULL) * tid;
 
+        if(sock < 0)
+        {
+            //start connection on socket
+            startConnection(&sock);
+        }
+        else
+        {
         //generate random number
         r = rand_r(&seed);
         r = (r % 100000);
 
-        //convert random number to message
-        snprintf(client_message, sizeof(client_message), "%d\n", r);
         //write message to socket
-        if((write_size = write(sock , client_message , strlen(client_message))) < 0)
+        if((write_size = send(sock , (const void*)&r , sizeof (unsigned int), MSG_NOSIGNAL)) < 0)
         {
-            if(write_size == 0)//server disconnected;
+            if((0 == write_size)||(-1 == write_size))//server disconnected;
             {
                 close(sock);
-                startConnection(&sock);
-            }
-            else if(write_size == -1)
-            {
-                close(sock);
-                perror("Filed to write to socket\n");
+                sock = -1;
             }
         }
-        //clean client message
-        memset(client_message, 0, sizeof (client_message));
+        }
         //sleep some time
         tw.tv_nsec = r;
         nanosleep (&tw, &tr);
@@ -145,6 +141,5 @@ int main(int argc , char *argv[])
             return 1;
         }
     }
-
     return 0;
 }
