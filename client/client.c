@@ -9,7 +9,6 @@
 
 #define CLIENTS_NUM 4
 #define IP_ADDR     "127.0.0.2"
-#define BUF_SIZE    13
 #define PORT        100
  
 /*********************************************************************
