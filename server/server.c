@@ -33,27 +33,21 @@ void *socketHandler(void *sd)
 {
     int sock = *(int*)sd;
     int read_size;
-    char client_message[BUF_SIZE];
+    int mes = {0};
 
     //Receive a message from client
-    while( (read_size = recv(sock , client_message , sizeof (client_message) , 0)) > 0 )
+    while( (read_size = recv(sock , (void *)&mes , sizeof (int) , MSG_NOSIGNAL)) > 0 )
     {
-        int i = atoi(client_message);
         pthread_mutex_lock(&mutex);
-        push(&head, i);
+        push(&head, mes);
         pthread_mutex_unlock(&mutex);
-        memset(client_message, 0, sizeof (client_message));
     }
 
-    if(read_size == 0)
+    if((0 == read_size)||(-1 == read_size))
     {
         //("Client disconnected");
+        close(sock);
     }
-    else if(read_size == -1)
-    {
-        perror("Failed to receive data from socket");
-    }
-    close(sock);
     pthread_exit(NULL);
 }
 
@@ -150,18 +144,19 @@ int main(int argc , char *argv[])
             perror("Failed to accept to connection\n");
         }
 
-        if(MAX_CONNECTION > n)
+        //if(MAX_CONNECTION > n)
         {
     //create thread for accepted connection
             if( pthread_create( &thread_id[n++] , NULL ,  socketHandler , (void*) &client_sock) < 0)
             {
                 perror("Failed to create to thread\n");
+                close(client_sock);
             }
         }
-        else
+        /*else
         {
             close(client_sock);
-        }
+        }*/
     }
 
     // join pthreads for handling connections
@@ -175,5 +170,7 @@ int main(int argc , char *argv[])
 
     // free memory for list
     deleteList(&head);
+    //destroy
+    pthread_mutex_destroy(&mutex);
     return 0;
 }
