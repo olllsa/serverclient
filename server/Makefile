@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-c -Wall
 LDFLAGS=-lpthread
-SOURCES=server.c list.c
+SOURCES=server.c list.c threadpool.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=server
 
