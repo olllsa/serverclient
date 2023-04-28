@@ -4,7 +4,7 @@
   >>generates random number and write it to server
   
 >Server:
-  >>read numbers from clients fnd put it to console
+  >>read numbers from clients and put it to console
 
 
 
