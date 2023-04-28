@@ -11,7 +11,6 @@
 #define PORT            100         // port for tcp-connection
 #define IP_ADDR         "127.0.0.2" // ip address for tcp-connection
 #define BUF_SIZE        20          // buf size for reading data from socket
-//#define THREADPOOL_SIZE 32          // size of threadpool
 #define QUEUE_SIZE      256         // size of queue
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;   //mutex for locking accessing to list
