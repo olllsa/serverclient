@@ -24,7 +24,7 @@ threadpool_t *pool;                                         // pool of threads
  *
  * @param void *sd              socket descriptor
  *
- * @return void *
+ * @return void
  *
  * @note This function for handling for socket-connection.
  *       Read message from client socket. Write data to list
