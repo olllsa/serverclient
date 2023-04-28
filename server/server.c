@@ -6,14 +6,17 @@
 #include <pthread.h>
 #include <unistd.h>
 #include "list.h"
+#include "threadpool.h"
 
 #define PORT            100         // port for tcp-connection
 #define IP_ADDR         "127.0.0.2" // ip address for tcp-connection
 #define BUF_SIZE        20          // buf size for reading data from socket
-#define MAX_CONNECTION  6           // max number of tcp-connection to clients
+#define THREADPOOL_SIZE 32          // size of threadpool
+#define QUEUE_SIZE      256         // size of queue
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;   //mutex for locking accessing to list
 Node* head = NULL;                                          // list of elements of numbers from clients
+threadpool_t *pool;                                         // pool of threads
  
 /*********************************************************************
  *
@@ -29,26 +32,20 @@ Node* head = NULL;                                          // list of elements 
  * @end
  *
  *********************************************************************/
-void *socketHandler(void *sd)
+void socketHandler(void *sd)
 {
-    int sock = *(int*)sd;
+    int sock = (intptr_t) sd;
     int read_size;
     int mes = {0};
 
     //Receive a message from client
-    while( (read_size = recv(sock , (void *)&mes , sizeof (int) , MSG_NOSIGNAL)) > 0 )
+    if( (read_size = recv(sock , (void *)&mes , sizeof (int) , MSG_NOSIGNAL)) > 0 )
     {
         pthread_mutex_lock(&mutex);
         push(&head, mes);
         pthread_mutex_unlock(&mutex);
     }
-
-    if((0 == read_size)||(-1 == read_size))
-    {
-        //("Client disconnected");
-        close(sock);
-    }
-    pthread_exit(NULL);
+    close(sock);
 }
 
 /*********************************************************************
@@ -97,9 +94,7 @@ int main(int argc , char *argv[])
     int client_sock;                    // socket for accepted connection for client
     struct sockaddr_in server;          // socket structure for server
     struct sockaddr_in client;          // socket structure for accepted connection from client
-    pthread_t thread_id[MAX_CONNECTION];// array of threads id for handling connetion
     pthread_t thread_log_id;            // thread id for logger
-    unsigned int n = 0;                 // number of accepted connection. Connection are not reusable
     int c;                              // size of socket structure
 
     //init mutex for locking access to list of numbers
@@ -109,6 +104,14 @@ int main(int argc , char *argv[])
     if( pthread_create( &thread_log_id , NULL ,  loggerHandler , NULL ) < 0)
     {
         perror("Failed to create to thread\n");
+        return 1;
+    }
+    
+    //create threadpool for processing connections
+    pool = threadpool_create(THREADPOOL_SIZE, QUEUE_SIZE, 0);
+    if(pool == NULL)
+    {
+        perror("Failed to create to threadpool\n");
         return 1;
     }
 
@@ -135,36 +138,17 @@ int main(int argc , char *argv[])
     listen(listen_sock , 1);
      
     c = sizeof(struct sockaddr_in);
-	
-    //connection from clients has been accepted
-    while( (client_sock = accept(listen_sock, (struct sockaddr*)&client, (socklen_t*)&c)) > 0 )
+
+    while(1)
     {
+        client_sock = accept(listen_sock, (struct sockaddr*)&client, (socklen_t*)&c);  // step 1
         if (client_sock < 0)
         {
             perror("Failed to accept to connection\n");
         }
-
-        //if(MAX_CONNECTION > n)
-        {
-    //create thread for accepted connection
-            if( pthread_create( &thread_id[n++] , NULL ,  socketHandler , (void*) &client_sock) < 0)
-            {
-                perror("Failed to create to thread\n");
-                close(client_sock);
-            }
-        }
-        /*else
-        {
-            close(client_sock);
-        }*/
+        threadpool_add(pool, &socketHandler, (void*)(intptr_t)client_sock, 0);
     }
-
-    // join pthreads for handling connections
-    for(n=0; n< MAX_CONNECTION; n++)
-    {
-        pthread_join(thread_id[n], NULL);
-    }
-
+	
     // join pthread for logger
     pthread_join(thread_log_id , NULL);
 
@@ -172,5 +156,7 @@ int main(int argc , char *argv[])
     deleteList(&head);
     //destroy
     pthread_mutex_destroy(&mutex);
+    //destroy threadpool
+    threadpool_destroy(pool, 0);
     return 0;
 }
