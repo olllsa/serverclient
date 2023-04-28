@@ -11,7 +11,7 @@
 #define PORT            100         // port for tcp-connection
 #define IP_ADDR         "127.0.0.2" // ip address for tcp-connection
 #define BUF_SIZE        20          // buf size for reading data from socket
-#define THREADPOOL_SIZE 32          // size of threadpool
+//#define THREADPOOL_SIZE 32          // size of threadpool
 #define QUEUE_SIZE      256         // size of queue
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;   //mutex for locking accessing to list
@@ -96,6 +96,7 @@ int main(int argc , char *argv[])
     struct sockaddr_in client;          // socket structure for accepted connection from client
     pthread_t thread_log_id;            // thread id for logger
     int c;                              // size of socket structure
+    int p;                              // number of cores
 
     //init mutex for locking access to list of numbers
     pthread_mutex_init(&mutex, NULL);
@@ -107,8 +108,11 @@ int main(int argc , char *argv[])
         return 1;
     }
     
+    //determine number of cores
+    p = sysconf(_SC_NPROCESSORS_ONLN);
+
     //create threadpool for processing connections
-    pool = threadpool_create(THREADPOOL_SIZE, QUEUE_SIZE, 0);
+    pool = threadpool_create(p, QUEUE_SIZE, 0);
     if(pool == NULL)
     {
         perror("Failed to create to threadpool\n");
